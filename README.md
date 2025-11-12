@@ -667,23 +667,6 @@ This project is proprietary software for internal enterprise use. All rights res
 
 ---
 
-## 🤝 貢獻指南 / Contributing
-
-本專案目前為內部專案，暫不接受外部貢獻。如有建議或問題，請聯繫系統管理員。
-
-This project is currently for internal use only. For suggestions or issues, please contact the system administrator.
-
----
-
-## 📞 聯絡資訊 / Contact
-
-如有任何問題或需要技術支援，請聯繫：
-
-- **系統管理員** / System Administrator
-- **IT 部門** / IT Department
-
----
-
 ## 🙏 致謝 / Acknowledgments
 
 感謝以下技術與平台：
