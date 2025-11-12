@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 500px;
+        }
+        .icon {
+            font-size: 5rem;
+            color: #dc3545;
+        }
+        .home-link {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="icon">🚫</div>
+    <h1 class="mt-4">權限不足 (Access Denied)</h1>
+    <p class="lead text-muted">抱歉，您沒有權限訪問此管理頁面。如果您認為這是一個錯誤，請聯繫系統管理員。</p>
+    <a href="<?!= ScriptApp.getService().getUrl(); ?>" class="btn btn-primary home-link">返回系統入口網站</a>
+</div>
+</body>
+</html>

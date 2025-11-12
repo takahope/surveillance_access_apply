@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+      /* ... 您原有的 CSS 樣式 ... */
+      body { font-family: Arial, sans-serif; margin: 20px; }
+      .container { max-width: 900px; margin: auto; }
+      h2 { border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }
+      #status { margin: 20px 0; font-size: 1.2em; }
+      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+      th { background-color: #f2f2f2; }
+      tr:nth-child(even) { background-color: #f9f9f9; }
+      .home-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 4px; }
+
+      /* ✨【修正1】新增載入遮罩的 CSS 樣式 */
+      .loading-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center;
+        align-items: center; z-index: 1000; color: white; text-align: center; display: none;
+      }
+      .loading-spinner {
+        border: 8px solid #f3f3f3; border-top: 8px solid #3498db;
+        border-radius: 50%; width: 60px; height: 60px;
+        animation: spin 1.5s linear infinite;
+      }
+      .loading-text { margin-top: 20px; font-size: 1.2em; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+      <h2>我的駐站攝影機影像調閱申請紀錄</h2>
+      
+      <a href="#" onclick="navigateTo('apply')" class="home-link">返回申請表單</a>
+      
+      <div id="status"></div>
+      <div id="recordsTable"></div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+      <div>
+        <div class="loading-spinner"></div>
+        <div class="loading-text">載入中，請稍候...</div>
+      </div>
+    </div>
+
+    <script>
+      // ✨【修正4】在頂部宣告 Web App 的基礎 URL
+      const BASE_URL = '<?!= ScriptApp.getService().getUrl(); ?>';
+
+      document.addEventListener('DOMContentLoaded', () => {
+        // ✨【修正5】在呼叫後端前，顯示全螢幕載入動畫
+        showLoading(true);
+        google.script.run.withSuccessHandler(displayRecords).withFailureHandler(showError).getMyApplications();
+      });
+
+      // ✨【修正6】新增控制載入遮罩和頁面導航的函式
+      function showLoading(show) {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+          overlay.style.display = show ? 'flex' : 'none';
+        }
+      }
+
+      function navigateTo(pageName) {
+        showLoading(true);
+        const destinationUrl = BASE_URL + '?page=' + pageName;
+        setTimeout(function() {
+          window.top.location.href = destinationUrl;
+        }, 100);
+      }
+
+      function displayRecords(data) {
+        // ✨【修正7】在處理回傳結果前，隱藏載入動畫
+        showLoading(false);
+        
+        const statusDiv = document.getElementById('status');
+        const tableDiv = document.getElementById('recordsTable');
+
+        if (!data || !data[0]) {
+            showError({message: "從伺服器收到的資料格式不正確。"});
+            return;
+        }
+        const header = data[0];
+        const records = data.slice(1);
+        if (records.length === 0) {
+          statusDiv.textContent = '您目前沒有任何申請紀錄。';
+          return;
+        }
+        statusDiv.style.display = 'none';
+
+        // ... 其餘建立表格的程式碼保持不變 ...
+        let tableHTML = '<table><thead><tr>';
+        header.forEach(h => { tableHTML += `<th>${h}</th>`; });
+        tableHTML += '</tr></thead><tbody>';
+        records.reverse().forEach(row => {
+          tableHTML += '<tr>';
+          row.forEach(cell => { tableHTML += `<td>${cell}</td>`; });
+          tableHTML += '</tr>';
+        });
+        tableHTML += '</tbody></table>';
+        tableDiv.innerHTML = tableHTML;
+      }
+
+      function showError(error) {
+        // ✨【修正8】在處理錯誤前，也要隱藏載入動畫
+        showLoading(false);
+        const statusDiv = document.getElementById('status');
+        statusDiv.style.color = 'red';
+        statusDiv.innerHTML = '查詢失敗：' + error.message;
+      }
+    </script>
+</body>
+</html>

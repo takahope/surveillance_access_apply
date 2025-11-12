@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+        body {
+            background-color: #f4f7f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .portal-container {
+            max-width: 900px;
+            width: 100%;
+        }
+        .card {
+            transition: transform .2s, box-shadow .2s;
+            cursor: pointer;
+            border: none;
+        }
+        .card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,.12);
+        }
+        .card-title {
+            color: #0056b3;
+            font-weight: bold;
+        }
+        .card-icon {
+            font-size: 3rem;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+<div class="container portal-container">
+    <div class="text-center mb-5">
+        <h1 class="display-4">駐站攝影機影像調閱申請</h1>
+        <p class="lead">請選擇您要執行的功能</p>
+    </div>
+    <div class="row">
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center" onclick="navigateTo('apply')">
+                <div class="card-body">
+                    <div class="card-icon">📝</div>
+                    <h5 class="card-title mt-3">新增調閱申請</h5>
+                    <p class="card-text">填寫表單以申請新的攝影機影像調閱。</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center" onclick="navigateTo('myapply')">
+                <div class="card-body">
+                    <div class="card-icon">📂</div>
+                    <h5 class="card-title mt-3">查詢我的申請</h5>
+                    <p class="card-text">查看您個人的歷史申請紀錄與處理狀態。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center" onclick="navigateTo('review')">
+                <div class="card-body">
+                    <div class="card-icon">🛡️</div>
+                    <h5 class="card-title mt-3">審核與開通作業</h5>
+                    <p class="card-text">審核並處理所有待處理的調閱申請。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let webAppUrl = '';
+
+    // 頁面載入時，先從後端取得 Web App 的基礎 URL
+    document.addEventListener("DOMContentLoaded", function() {
+        google.script.run.withSuccessHandler(url => {
+            webAppUrl = url;
+        }).getWebAppUrl();
+    });
+
+    function navigateTo(page) {
+        if (webAppUrl) {
+            // 使用 _top 來確保在整個視窗中開啟，而不是在 iframe 內
+            window.open(webAppUrl + '?page=' + page, '_top');
+        } else {
+            alert("頁面初始化中，請稍候...");
+        }
+    }
+</script>
+</body>
+</html>

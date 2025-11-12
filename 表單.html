@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+      /* 您的 CSS 樣式，保持不變 */
+      body { font-family: Arial, sans-serif; margin: 20px; }
+      .container { max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+      label { display: block; margin-top: 15px; font-weight: bold; }
+      input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+      button { background-color: #4CAF50; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 20px; }
+      button:disabled { background-color: #ccc; }
+      #status { margin-top: 15px; font-weight: bold; }
+      .home-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 4px; }
+      
+      /* 載入遮罩的 CSS 樣式 */
+      .loading-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center;
+        align-items: center; z-index: 1000; color: white; text-align: center; display: none;
+      }
+      .loading-spinner {
+        border: 8px solid #f3f3f3; border-top: 8px solid #3498db;
+        border-radius: 50%; width: 60px; height: 60px;
+        animation: spin 1.5s linear infinite;
+      }
+      .loading-text { margin-top: 20px; font-size: 1.2em; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+      <h2>駐站攝影機影像調閱申請</h2>
+      
+      <a href="#" onclick="navigateTo('myapply')" class="home-link">查看我的申請紀錄</a>
+
+      <form id="requestForm" onsubmit="event.preventDefault(); submitForm();">
+        <label for="requester">申請人:</label>
+        <select id="requester" name="requester" required onchange="updateCameras()"></select>
+
+        <label for="camera">攝影機地點:</label>
+        <select id="camera" name="camera" required>
+            <option value="">請先選擇申請人</option>
+        </select>
+        
+        <label for="activationDays">調閱有效天數:</label>
+        <select id="activationDays" name="activationDays" required>
+          <option value="1">1天</option> 
+          <option value="2">2天</option> 
+          <option value="3">3天</option>
+          <option value="4">4天</option>
+          <option value="5">5天</option>
+        </select>
+        <label for="reason">調閱事由:</label>
+        <textarea id="reason" name="reason" rows="4" required></textarea>
+        <button type="submit" id="submitButton">提交申請</button>
+      </form>
+      <div id="status"></div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+      <div> <div class="loading-spinner"></div> <div class="loading-text">載入中，請稍候...</div> </div>
+    </div>
+
+    <script>
+      // ✨【修正2】在頂部宣告一個常數，儲存 Web App 的基礎 URL，方便後續使用
+      const BASE_URL = '<?!= ScriptApp.getService().getUrl(); ?>';
+      
+      let requesterCameraMap = {};
+
+      document.addEventListener('DOMContentLoaded', () => {
+        showLoading(true);
+        google.script.run.withSuccessHandler(initializeForm).withFailureHandler(formSubmitFailure).getRequesterData();
+      });
+
+      // ✨【修正3】新增此函式，專門處理頁面導航
+      function navigateTo(pageName) {
+        // 步驟1: 立即顯示載入動畫
+        showLoading(true);
+        
+        // 步驟2: 組合目標 URL
+        const destinationUrl = BASE_URL + '?page=' + pageName;
+        
+        // 步驟3: 使用一個微小的延遲來確保動畫有時間渲染，然後再跳轉
+        setTimeout(function() {
+          window.top.location.href = destinationUrl;
+        }, 100);
+      }
+
+      function initializeForm(dataMap) {
+        // ... 此函式及以下所有函式都保持不變 ...
+        showLoading(false);
+        const requesterSelect = document.getElementById('requester');
+        requesterCameraMap = dataMap;
+        const applicants = Object.keys(requesterCameraMap);
+        requesterSelect.innerHTML = '<option value="">請選擇申請人</option>';
+        applicants.forEach(name => {
+          let option = new Option(name, name);
+          requesterSelect.add(option);
+        });
+        updateCameras();
+      }
+      
+      function updateCameras() {
+          const requesterName = document.getElementById('requester').value;
+          const cameraSelect = document.getElementById('camera');
+          cameraSelect.innerHTML = '';
+          if (requesterName && requesterCameraMap[requesterName]) {
+              const cameras = requesterCameraMap[requesterName];
+              cameraSelect.innerHTML = '<option value="">請選擇攝影機</option>';
+              cameras.forEach(camera => {
+                  let option = new Option(camera, camera);
+                  cameraSelect.add(option);
+              });
+              cameraSelect.disabled = false;
+          } else {
+              cameraSelect.innerHTML = '<option value="">請先選擇申請人</option>';
+              cameraSelect.disabled = true;
+          }
+      }
+      
+      function submitForm() {
+        const submitButton = document.getElementById('submitButton');
+        submitButton.disabled = true;
+        submitButton.textContent = '處理中...';
+        showLoading(true);
+        const formData = {
+          requester: document.getElementById('requester').value,
+          camera: document.getElementById('camera').value,
+          activationDays: document.getElementById('activationDays').value,
+          reason: document.getElementById('reason').value
+        };
+        google.script.run.withSuccessHandler(formSubmitSuccess).withFailureHandler(formSubmitFailure).processForm(formData);
+      }
+      
+      function showLoading(show) {
+        const overlay = document.getElementById('loadingOverlay');
+        const loadingText = overlay.querySelector('.loading-text');
+        // 根據不同情境顯示不同文字
+        if (document.activeElement && document.activeElement.id === 'submitButton') {
+            loadingText.textContent = '處理中，請稍候...';
+        } else {
+            loadingText.textContent = '載入中，請稍候...';
+        }
+        overlay.style.display = show ? 'flex' : 'none';
+      }
+
+      function formSubmitSuccess(message) {
+        showLoading(false);
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = message;
+        statusDiv.style.color = 'green';
+        document.getElementById('requestForm').reset();
+        updateCameras();
+        const submitButton = document.getElementById('submitButton');
+        submitButton.disabled = false;
+        submitButton.textContent = '提交申請';
+      }
+
+      function formSubmitFailure(error) {
+        showLoading(false);
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = '操作失敗: ' + error.message;
+        statusDiv.style.color = 'red';
+        const submitButton = document.getElementById('submitButton');
+        submitButton.disabled = false;
+        submitButton.textContent = '提交申請';
+      }
+    </script>
+</body>
+</html>

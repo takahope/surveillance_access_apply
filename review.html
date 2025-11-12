@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        /* ... 您的 CSS 樣式，保持不變 ... */
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        h2 { border-bottom: 2px solid #DC3545; padding-bottom: 10px; }
+        #status { margin: 20px 0; font-size: 1.2em; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        button { background-color: #28A745; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:disabled { background-color: #ccc; }
+        .home-link { display: inline-block; margin-bottom: 20px; padding: 10px 15px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 4px; }
+        .action-bar { padding: 10px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; }
+        #recordsTable { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>駐站攝影機影像調閱申請審核開通作業</h2>
+    <a href="<?!= ScriptApp.getService().getUrl(); ?>" class="home-link">返回申請主頁面</a>
+
+    <div id="status">載入中...</div>
+    <progress id="progressBar" style="width: 100%; margin-top: 10px;"></progress>
+    
+    <div id="recordsTable"></div>
+   
+    <button id="batchButton" onclick="handleBatchApproval()">批次同意已選項目</button>
+   
+</div>
+
+<script>
+    // 所有的 JavaScript 程式碼都保持不變，除了 escapeHtml 函式
+
+    document.addEventListener('DOMContentLoaded', loadTasks);
+
+    function loadTasks() {
+        document.getElementById('status').textContent = '正在載入您的審核清單...';
+        const progressBar = document.getElementById('progressBar');
+        if (progressBar) progressBar.style.display = 'block';
+
+        google.script.run
+            .withSuccessHandler(displayRecords)
+            .withFailureHandler(showError)
+            .getTasksForCurrentUser();
+    }
+
+    function displayRecords(response) {
+        const statusDiv = document.getElementById('status');
+        const tableDiv = document.getElementById('recordsTable');
+        const progressBar = document.getElementById('progressBar');
+        progressBar.style.display = 'none';
+
+        if (!response || !response.records) { showError({message: "資料格式不正確。"}); return; }
+        
+        const { header, records } = response;
+        if (records.length === 0) {
+            statusDiv.textContent = '您目前沒有需要處理的申請作業。';
+            tableDiv.innerHTML = '';
+            return;
+        }
+        statusDiv.style.display = 'none';
+
+        let tableHTML = '<table><thead><tr><th><input type="checkbox" onchange="toggleAll(this)"></th>';
+        header.forEach(h => { tableHTML += `<th>${h}</th>`; });
+        tableHTML += '</tr></thead><tbody>';
+
+        records.forEach(record => {
+            tableHTML += `<tr>`;
+            tableHTML += `<td><input type="checkbox" class="record-checkbox" value="${record.rowNum}"></td>`;
+            record.data.forEach(cell => { 
+                tableHTML += `<td>${escapeHtml(String(cell))}</td>`; 
+            });
+            tableHTML += '</tr>';
+        });
+
+        tableHTML += '</tbody></table>';
+        tableDiv.innerHTML = tableHTML;
+    }
+
+    function toggleAll(source) {
+        const checkboxes = document.querySelectorAll('.record-checkbox');
+        checkboxes.forEach(checkbox => checkbox.checked = source.checked);
+    }
+
+    function handleBatchApproval() {
+        const selectedCheckboxes = document.querySelectorAll('.record-checkbox:checked');
+        if (selectedCheckboxes.length === 0) {
+            alert('請至少勾選一個要處理的項目。');
+            return;
+        }
+        if (!confirm(`您確定要一次處理 ${selectedCheckboxes.length} 筆申請嗎？`)) return;
+
+        const rowNumbersToUpdate = [];
+        selectedCheckboxes.forEach(checkbox => {
+            rowNumbersToUpdate.push(parseInt(checkbox.value, 10));
+        });
+
+        const btn = document.getElementById('batchButton');
+        btn.disabled = true;
+        btn.textContent = '批次處理中...';
+        
+        google.script.run
+            .withSuccessHandler(approvalSuccess)
+            .withFailureHandler(error => approvalError(btn, error))
+            .processBatchApproval(rowNumbersToUpdate);
+    }
+    
+    function approvalSuccess(message) {
+        alert(message);
+        loadTasks();
+        const btn = document.getElementById('batchButton');
+        btn.disabled = false;
+        btn.textContent = '批次同意已選項目';
+    }
+
+    function approvalError(button, error) {
+        alert('操作失敗: ' + error.message);
+        button.disabled = false;
+        button.textContent = '批次同意已選項目';
+    }
+
+    function showError(error) {
+        const statusDiv = document.getElementById('status');
+        const progressBar = document.getElementById('progressBar');
+        if(progressBar) progressBar.style.display = 'none';
+
+        statusDiv.style.color = 'red';
+        statusDiv.innerHTML = '發生錯誤：' + error.message;
+    }
+
+    /**
+     * ✨ --- 修正後的 escapeHtml 函式 --- ✨
+     * 輔助函式：對 HTML 進行編碼，防止 XSS 攻擊。
+     * 將正規表示式寫法從 /.../g 改為 new RegExp('...', 'g') 以避免 GAS 樣板引擎解析錯誤。
+     */
+     function escapeHtml(unsafe) {
+      const safeString = String(unsafe === null || unsafe === undefined ? '' : unsafe);
+      return safeString
+           .replace(new RegExp('&', 'g'), "&amp;")
+           .replace(new RegExp('<', 'g'), "&lt;")
+           .replace(new RegExp('>', 'g'), "&gt;")
+           .replace(new RegExp('"', 'g'), "&quot;")
+           .replace(new RegExp("'", 'g'), "&#039;");
+    }
+</script>
+</body>
+</html>
